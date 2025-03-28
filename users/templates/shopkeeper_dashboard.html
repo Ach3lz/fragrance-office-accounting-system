@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Shopkeeper Dashboard{% endblock %}
+
+{% block content %}
+<h2>Shopkeeper Dashboard</h2>
+<a href="{% url 'record_sale' %}" class="btn btn-primary">Record a Sale</a>
+<a href="{% url 'product_list' %}" class="btn btn-secondary">View Products</a>
+{% endblock %}
