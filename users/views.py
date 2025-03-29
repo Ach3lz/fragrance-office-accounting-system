@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -132,7 +133,7 @@ def record_sale(request):
                     sale.product.stock -= sale.quantity
                     sale.product.save()
                     sale.save()  # Ensure the sale is recorded
-                    messages.success(request, f"Sale recorded: {sale.quantity} x {sale.product.name}")
+                    messages.success(request, f"Sale recorded: {sale.quantity} x {sale.product.name} at ${sale.selling_price} each")
                     return redirect('shopkeeper_dashboard')
 
                 except Exception as e:
@@ -146,22 +147,41 @@ def record_sale(request):
     return render(request, 'record_sale.html', {'form': form})
 
 
-
+@login_required
 def sales_report(request):
-    """Generate daily and monthly profit & loss reports."""
+    """Generate daily and monthly profit & loss reports based on user input."""
+    
     today = now().date()
-    current_month = today.month
-    current_year = today.year
+    
+    # Get parameters from request
+    selected_date = request.GET.get("date", today.strftime("%Y-%m-%d"))
+    selected_month = request.GET.get("month", today.month)
+    selected_year = request.GET.get("year", today.year)
+
+    # Convert selected_date to datetime.date object
+    try:
+        if isinstance(selected_date, str):
+            selected_date = datetime.strptime(selected_date, "%Y-%m-%d").date()
+        else:
+            selected_date = today  # Default to today if conversion fails
+        
+        selected_month = int(selected_month)
+        selected_year = int(selected_year)
+    
+    except ValueError:
+        selected_date = today
+        selected_month = today.month
+        selected_year = today.year
 
     # Daily sales report
     daily_sales_report = (
         Sale.objects
-        .filter(sale_date__date=today)
+        .filter(sale_date__date=selected_date)
         .values("product__name")
         .annotate(
             total_quantity=Sum("quantity"),
             total_profit=Sum(ExpressionWrapper(
-                F("quantity") * (F("product__price") - F("product__cost_price")),
+                F("quantity") * (F("selling_price") - F("product__cost_price")),
                 output_field=DecimalField(max_digits=10, decimal_places=2)
             ))
         )
@@ -170,18 +190,17 @@ def sales_report(request):
     # Monthly sales report
     monthly_sales_report = (
         Sale.objects
-        .filter(sale_date__month=current_month, sale_date__year=current_year)
+        .filter(sale_date__month=selected_month, sale_date__year=selected_year)
         .values("product__name")
         .annotate(
             total_quantity=Sum("quantity"),
             total_profit=Sum(ExpressionWrapper(
-                F("quantity") * (F("product__price") - F("product__cost_price")),
+                F("quantity") * (F("selling_price") - F("product__cost_price")),
                 output_field=DecimalField(max_digits=10, decimal_places=2)
             ))
         )
     )
 
-    # Calculate total profits
     total_daily_profit = sum(sale["total_profit"] for sale in daily_sales_report if sale["total_profit"] is not None)
     total_monthly_profit = sum(sale["total_profit"] for sale in monthly_sales_report if sale["total_profit"] is not None)
 
@@ -190,12 +209,40 @@ def sales_report(request):
         "monthly_sales_report": monthly_sales_report,
         "total_daily_profit": total_daily_profit,
         "total_monthly_profit": total_monthly_profit,
+        "selected_date": selected_date,
+        "selected_month": selected_month,
+        "selected_year": selected_year,
     })
-    
+
     
 @login_required
 def transaction_list(request):
-    """ View all recorded transactions with details """
-    transactions = Sale.objects.select_related("product").order_by("-sale_date")  # Get all sales, newest first
+    """ View all recorded transactions with filtering options. """
+    transactions = Sale.objects.select_related("product").order_by("-sale_date")
 
-    return render(request, "transactions.html", {"transactions": transactions})
+    customer = request.GET.get('customer', '')
+    product_id = request.GET.get('product', '')
+    date = request.GET.get('date', '')
+
+    if customer:
+        transactions = transactions.filter(customer_details__icontains=customer)
+    
+    if product_id:
+        transactions = transactions.filter(product__id=product_id)
+
+    if date:
+        try:
+            date_obj = now().strptime(date, "%Y-%m-%d").date()
+            transactions = transactions.filter(sale_date__date=date_obj)
+        except ValueError:
+            pass  # Ignore invalid date input
+
+    products = Products.objects.all()  # For dropdown filter
+
+    return render(request, "transactions.html", {
+        "transactions": transactions,
+        "products": products,
+        "selected_customer": customer,
+        "selected_product": product_id,
+        "selected_date": date
+    })

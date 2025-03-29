@@ -45,7 +45,9 @@ class Products(models.Model):
 class Sale(models.Model):
     product = models.ForeignKey(Products, on_delete=models.CASCADE) 
     quantity = models.PositiveIntegerField()  
+    selling_price = models.DecimalField(max_digits=8, decimal_places=2)  # New Field
     customer_details = models.CharField(max_length=70)
+    mode_of_payment = models.CharField(max_length=20)
     sale_date = models.DateTimeField(auto_now_add=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -62,9 +64,9 @@ class Sale(models.Model):
         return f"{self.quantity} x {self.product.name} on {self.sale_date}"
 
     def total_price(self):
-        return self.product.price * self.quantity  # Total revenue
+        return self.selling_price * self.quantity  # Total revenue
 
     @property
     def total_profit(self):
         """Calculates profit dynamically (Revenue - Cost)"""
-        return self.quantity * (self.product.price - self.product.cost_price)
+        return self.quantity * (self.selling_price - self.product.cost_price)

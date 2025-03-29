@@ -4,7 +4,9 @@
 
 {% block content %}
 <h2>Product List</h2>
-<a href="{% url 'add_product' %}">Add New Product</a>
+{% if request.user.is_staff %}
+    <a href="{% url 'add_product' %}">Add New Product</a>
+{% endif %}
 <table class="table table-striped">
     <thead>
         <tr>

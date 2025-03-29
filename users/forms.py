@@ -26,7 +26,7 @@ class ProductForm(forms.ModelForm):
 class SalesForm(forms.ModelForm):
     class Meta:
         model = Sale
-        fields = ['product', 'quantity', 'customer_details']
+        fields = ['product', 'quantity','selling_price','mode_of_payment', 'customer_details']
         
     def clean_quantity(self):
         quantity = self.cleaned_data.get('quantity')

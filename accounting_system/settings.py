@@ -25,8 +25,7 @@ SECRET_KEY = 'django-insecure-4bcm=gqrs7!vqhkth^@6mmwgmwhdq1f0ady(#y*rd0=@0c!(g0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ["fitsandfragrances.onrender.com"]
 
 # Application definition
 
@@ -131,3 +130,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 LOGIN_URL = '/login/'
+
+MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
